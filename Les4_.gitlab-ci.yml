@@ -1,6 +1,7 @@
 
 
 stages:
+  - print_export
   - build
   - test
   - deploy
@@ -11,6 +12,12 @@ variables:
   env: prod
   deploy_subfolder: html
 
+
+#########################################################################################################
+print_vars:
+   stage: print_export
+   script:
+     - export                #печать все переменных
 ##########################################################################################################
 install_dependencies:
   image: node:14.15.0-stretch
