@@ -1,0 +1,105 @@
+
+
+stages:
+  - build
+  - test
+  - deploy
+  - revert
+
+variables:
+  docker_html_path: "/www"
+  env: prod
+  deploy_subfolder: html
+
+##########################################################################################################
+install_dependencies:
+  image: node:14.15.0-stretch
+  stage: build
+  script:
+    - yarn install  # Установить все зависимости проекта 
+    - yarn build    # 
+    - mv build build_$env
+  artifacts:
+    paths:
+      - node_modules
+      - build_$env
+  cache:
+    key:
+      files:
+        - yarn.lock
+    paths:
+      - node_modules
+  tags:
+    - lss4_2
+
+
+build_staging:
+  extends: install_dependencies  # Это означает что унаследуем все зависимости стайжинга install_dependencies,
+                                # таким образом запускаем две сборки, но сам код не копируем.
+  variables:
+    env: staging                #  Переменная env, в данном случае будет build_staging, см.install_dependencies, - build_$env
+    REACT_APP_WEBSITE_PREFIX: "[staging] " # Будет использовать в загаловке сайте [staging]
+    PUBLIC_URL: "/$CI_COMMIT_BRANCH"   # Развернуть сайт под папки.
+  tags:
+    - lss4_2
+
+
+
+##########################################################################################################
+deploy_staging:
+  extends: deploy_prod
+  variables:
+    deploy_subfolder: staging/$CI_COMMIT_BRANCH
+    env: staging
+  when: always
+  allow_failure: true # Допускаем ошибки. т.е. если даже выйдет ошибки , piplane будет работать.
+  only:
+    - master
+	- /feature-.*/
+  tags:
+    - lss4_2
+
+deploy_prod:
+  stage: deploy
+  script:
+    - cp -r build_$env $docker_html_path/test-app/${env}_$CI_COMMIT_SHA # Копирование папки build, в отдельную папку www/test-app/prod_$CI_COMMIT_SHA (prod версия сайта)
+    - cp -Pv $docker_html_path/$deploy_subfolder $docker_html_path/test-app/${env}_$CI_COMMIT_SHA/prev-version || true # 
+    #         /www            /   html              /www                   /prod_  
+  only:
+    - master
+  tags:
+    - lss4_2
+
+activate_staging:
+  extends: activate_prod
+  variables:
+    deploy_subfolder: staging/$CI_COMMIT_BRANCH
+    env: staging
+  when: always
+  only:
+    - master
+    - /feature-.*/
+  tags:
+    - lss4_2
+
+activate_prod:
+  stage: deploy
+  script:
+    - ln -fsnv /var/www/test-app/${env}_$CI_COMMIT_SHA $docker_html_path/$deploy_subfolder
+  when: manual
+  only:
+    - master
+  tags:
+    - lss4_2
+
+
+
+
+################################################################################################################################
+revert:
+  stage: revert
+  when: manual
+  script:
+    - cp -Pv --remove-destination $docker_html_path/test-app/$CI_COMMIT_SHA/prev-version $docker_html_path/html
+  tags:
+    - lss4_2
