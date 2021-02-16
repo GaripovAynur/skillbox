@@ -55,7 +55,7 @@ deploy_staging:
   allow_failure: true # Допускаем ошибки. т.е. если даже выйдет ошибки , piplane будет работать.
   only:
     - master
-	- /feature-.*/
+    - /feature-.*/
   tags:
     - lss4_2
 
