@@ -1,0 +1,72 @@
+stages:
+  - deploy
+  - revert
+
+variables:
+  docker_html_path: "/www"
+  env: prod
+  deploy_subfolder: html
+
+deploy_staging:
+  extends: deploy_prod
+  variables:
+    deploy_subfolder: staging/$CI_COMMIT_BRANCH
+    env: staging
+  when: always
+  only:
+    - master
+    - /feature-.*/
+  tags:
+    - less_4_2_
+
+deploy_prod:
+  stage: deploy
+  script:
+    - apt-get update && apt-get install git -y
+    - mkdir /git && cd /git
+    - git clone https://gitlab.com/kuyan911/static_web.git
+    - cp -r /git/*  $docker_html_path/test-app/${env}_$CI_COMMIT_SHA
+  only:
+    - master
+  tags:
+    - less_4_2_
+
+
+activate_staging:
+  extends: activate_prod
+  variables:
+    deploy_subfolder: staging/$CI_COMMIT_BRANCH
+    env: staging
+  when: always
+  only:
+    - master
+    - /feature-.*/
+  tags:
+    - less_4_2_
+
+activate_prod:
+  stage: deploy
+  script:
+    - rm -rf $docker_html_path/$deploy_subfolder
+    - ln -snv /var/www/test-app/${env}_$CI_COMMIT_SHA $docker_html_path/$deploy_subfolder
+  when: manual
+  only:
+    - master
+  tags:
+    - less_4_2_
+
+revert:
+  stage: revert
+  when: manual
+  script:
+    - cp -Pv --remove-destination $docker_html_path/test-app/${env}_$CI_COMMIT_SHA $docker_html_path/html
+  tags:
+    - less_4_2_
+
+revert_2_step:
+  stage: revert
+  when: manual
+  script:
+    - cd $docker_html_path/test-app/; cp -Pv --remove-destination $(ls -t | sed -n '3p') $docker_html_path/html
+  tags:
+    - less_4_2_
