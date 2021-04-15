@@ -1,0 +1,25 @@
+
+---
+- name: Install reactjs and proxy
+  become: yes
+  
+  hosts:
+        - reactjs
+  roles:
+        - deploy_reactjs
+
+
+  hosts: 
+       - nginx_servers
+  roles: 
+       - deploy_proxy
+  
+ 
+  # roles:
+  # - role: deploy_reactjs 
+  #   hosts: reactjs
+
+  # - role: deploy_proxy
+  #   hosts: nginx_servers
+
+

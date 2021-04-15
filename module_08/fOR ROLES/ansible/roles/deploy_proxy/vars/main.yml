@@ -1,0 +1,5 @@
+---
+# vars file for deploy_proxy
+reactjs_host_ip: 3.128.244.37
+reactjs_host_port: 80
+config_file: /etc/nginx/sites-enabled/

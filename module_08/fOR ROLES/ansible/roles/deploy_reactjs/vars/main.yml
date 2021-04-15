@@ -1,0 +1,4 @@
+---
+# vars file for deploy_reactjs
+project_path:   /var/www/
+repository:     https://gitlab.com/asomirl/skillbox-deploy-blue-green.git

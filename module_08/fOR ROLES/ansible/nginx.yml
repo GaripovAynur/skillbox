@@ -1,0 +1,38 @@
+- name: Install reactjs
+
+  hosts: nginx_servers
+
+  vars:
+        reactjs_host_ip: 3.142.224.144
+        reactjs_host_port: 80
+        config_file: "/etc/nginx/sites-enabled/"
+
+  become: yes
+  pre_tasks:
+        - name: Delete default file nginx_servers
+          file:
+             path: "{{ config_file }}/default"
+             state: absent
+          notify: Restart NGINX
+
+  tasks:
+          # - name: Creat recurse Directory config_file
+          #   file:
+          #     path: "{{ config_file }}"
+          #     state: directory
+          #     mode: 0755
+          #     recurse: yes
+
+
+          - name: Creat new file nginx Configuration
+            template:
+              src: nginx.conf.j2
+              dest: "{{ config_file }}/nginx.conf"
+              mode: 0644
+              owner: root
+            notify: Restart NGINX
+
+
+  handlers:
+        - name: Restart NGINX
+          service: name=nginx state=reloaded

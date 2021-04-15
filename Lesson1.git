@@ -1,0 +1,7 @@
+git clone ssh://git@gitlab.skillbox.ru:22218/superskillbox/dockertest.git
+git remote add out1 https://github.com/AtsushiSakai/PythonRobotics.git
+git fetch out1
+git branch develop out1/master
+git checkout develop 
+git pull
+git push -u origin -o merge_request.create

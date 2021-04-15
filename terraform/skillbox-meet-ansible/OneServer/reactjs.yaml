@@ -1,0 +1,112 @@
+---
+- hosts: frontend_servers
+
+  vars:
+    project_path: /var/www
+    repositiry: https://gitlab.com/asomirl/skillbox-deploy-blue-green.git
+
+
+  tasks:
+
+    - name: "Yarn | GPG"
+      apt_key:
+        url: https://dl.yarnpkg.com/debian/pubkey.gpg
+        state: present
+
+    - name: "Yarn | Ensure Debian sources list file exists"
+      file:
+        path: /etc/apt/sources.list.d/yarn.list
+        owner: root
+        mode: 0644
+        state: touch
+
+    - name: "Yarn | Ensure Debian package is in sources list"
+      lineinfile:
+        dest: /etc/apt/sources.list.d/yarn.list
+        regexp: 'deb http://dl.yarnpkg.com/debian/ stable main'
+        line: 'deb http://dl.yarnpkg.com/debian/ stable main'
+        state: present
+
+    - name: "Yarn | Update APT cache"
+      apt:
+        update_cache: yes
+
+    - name: Install the packages YARN, NPM, NodeJS, Nginx
+      apt: 
+        pkg: 
+          - yarn
+          - npm
+          - nodejs
+          - nginx
+
+    - name: Delete the html file 
+      file:
+        path: "{{ project_path }}/html"
+        state: absent
+
+    - name: Set some variable
+      set_fact:
+        release_path: "{{ project_path }}/releases/{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+        current_path: "{{ project_path }}/html"
+      tags: start_yarn
+
+    - name: Create project path
+      file:
+        dest={{ project_path }}
+        mode=0755
+        recurse=yes
+        state=directory
+
+    - name: Retrieve current release folder
+      command: readlink -f html
+      register: current_release_path
+      ignore_errors: yes
+      args:
+        chdir: "{{ project_path }}"
+
+    - name: Create Release folder
+      file:
+        dest={{ release_path }}
+        mode=0755
+        recurse=yes
+        state=directory
+
+    - name: Clone the repository
+      git:
+        repo: "{{ repositiry }}"
+        dest: "{{ release_path }}"
+
+
+    - name: Add IP address of instance to main site 
+      replace:
+        path: "{{ release_path }}/src/App.js"
+        regexp: 'Test of revert'
+        replace: '{{ ansible_default_ipv4.address }}'
+        backup: yes
+
+    - name: Install packages based on package.json.
+      npm:
+        path: "{{ release_path }}"
+
+    - name: YARN install
+      command: "yarn install"
+      args:
+        chdir: "{{ release_path }}"
+
+
+    - name: Yarn Build
+      command: "yarn build"
+      args:
+        chdir: "{{ release_path }}"
+      environment:
+        REACT_APP_WEBSITE_PREFIX: 'Aynur Garipov'
+
+    - name: Update Symlink
+      file:
+        src={{ release_path }}/build
+        dest={{ current_path }}
+        state=link
+
+
+
+

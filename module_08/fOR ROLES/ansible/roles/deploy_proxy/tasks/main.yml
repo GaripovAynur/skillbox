@@ -1,0 +1,15 @@
+---
+# tasks file for deploy_proxy
+
+- name: Delete default file nginx_servers
+  file:
+    path: "{{ config_file }}/default"
+    state: absent
+    notify: Restart NGINX
+
+- name: Creat new file nginx Configuration
+  template:
+    src: nginx.conf.j2
+    dest: "{{ config_file }}/nginx.conf"
+    mode: 0644
+    owner: root

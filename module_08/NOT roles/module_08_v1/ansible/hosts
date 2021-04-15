@@ -1,0 +1,6 @@
+[reactjs]
+reactjs_server ansible_host=3.140.91.41 ansible_user=root ansible_password="Init123#"
+
+[nginx_servers]
+nginx_servers_1 ansible_host=13.58.182.82 ansible_user=root ansible_password="Init123#"
+nginx_servers_2 ansible_host=13.59.180.229 ansible_user=root ansible_password="Init123#"

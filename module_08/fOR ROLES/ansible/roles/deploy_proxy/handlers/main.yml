@@ -1,0 +1,4 @@
+---
+# handlers file for deploy_proxy
+- name: Restart NGINX
+  service: name=nginx state=reloaded

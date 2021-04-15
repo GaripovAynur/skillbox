@@ -1,0 +1,89 @@
+---
+# tasks file for deploy_reactjs
+
+        - name: Download APT GPG key
+          apt_key:
+                  url: https://dl.yarnpkg.com/debian/pubkey.gpg
+                  state: present
+
+        - name: Creat new file for yarn.list
+          file:
+                path: /etc/apt/sources.list.d/yarn.list
+                state: touch
+                mode: 0644
+                owner: root
+
+        - name: Add deb http://dl.yarnpkg.com/debian/ stable main
+          lineinfile:
+                dest: /etc/apt/sources.list.d/yarn.list
+                regexp: '^'
+                line: 'deb http://dl.yarnpkg.com/debian/ stable main'
+                state: present
+
+        - name: Update APT key cache
+          apt:
+                update_cache: yes
+
+
+        - name: Install yarn, npm and nodejs
+          apt: name={{ item }} state=latest
+          loop:
+               - yarn
+               - npm
+               - nodejs
+
+        - name: Set some variables
+          set_fact:
+            release_path: "{{ project_path }}/releases/{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+
+        - name: Creat recurse Directory relase_path
+          file:
+            path: "{{ release_path }}"
+            state: directory
+            mode: '0777'
+            recurse: yes
+
+
+        - name: Creat recurse Directory project_path
+          file:
+            path: "{{ project_path }}"
+            state: directory
+            mode: '0777'
+            recurse: yes
+
+        - name: Git clone repository
+          git:
+            repo: "{{ repository }}"
+            dest: "{{ release_path }}"
+
+
+        - name: ADD IP adress
+          replace: # При помощи модуля replace измените текст в файле
+            path: "{{ release_path }}/src/App.js"             # Путь изменяемого файла
+            regexp: 'Test of revert'                          # Изменяемый текст
+            replace: "{{ ansible_hostname }}"     # Новый текст
+
+        - name: ADD new owner
+          replace: # При помощи модуля replace измените текст в файле
+            path: "{{ release_path }}/src/App.js"             # Путь изменяемого файла
+            regexp: 'Akilin Alexander'                          # Изменяемый текст
+            replace: "Garipov Aynur"     # Новый текст
+
+        - name: Install pack pm2 with npm
+          npm:
+            name: pm2
+            global: yes
+
+
+        - name: Install .json #Запустите при помощи yarn установку пакетов, которые определены в package.json
+          yarn:
+            path: "{{ release_path }}"
+
+        #
+        - name: Start ReactJS
+          shell:
+            cmd: "pm2 --name ReactJS start npm -- start"
+          args:
+            chdir: "{{ release_path }}"
+          environment:
+            PORT: 80

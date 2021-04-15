@@ -1,0 +1,3 @@
+[frontend_servers]
+reactjs_2 ansible_host=18.218.68.178 ansible_user=root ansible_password=qaz
+reactjs_3 ansible_host=3.138.103.123 ansible_user=root ansible_password=qaz          
