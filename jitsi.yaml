@@ -1,0 +1,57 @@
+stages:
+  - jitsi
+  - jvb
+  - jibri
+
+variables:
+  configs: $CONFIGS
+  DOCKER_IMAGE_NAME: "images.digitalms.ru/inovus/base/ssh-git:latest"
+  REMOTE_USER: "root"
+  PV_CATALOG: "/pv/jitsi"
+  PV_CATALOG_K8S: "$PV_CATALOG/docker-config/jitsi-k8s"
+
+.deploy_template: &deploy_template
+  image: 
+    name: $DOCKER_IMAGE_NAME
+    pull_policy: if-not-present
+  before_script:
+    - git clone $configs && cp -r configs/* ./
+    - mkdir -p ~/.ssh && echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+  script:
+    - |
+      for REMOTE_HOST_CONNECT in $(cat ${CI_PROJECT_DIR}/configs/jitsi/$stand/hosts.$CI_JOB_STAGE)
+      do
+        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST_CONNECT "cd $PV_CATALOG_K8S && $UP_DOWN_CONTAINER down || true"
+        ssh $REMOTE_USER@$REMOTE_HOST_CONNECT "cd $PV_CATALOG && git config --global --add safe.directory $PV_CATALOG && git pull --no-verify $JITSI_REPO"
+        scp ${CI_PROJECT_DIR}/configs/jitsi/$stand/.jitsi-env $REMOTE_USER@$REMOTE_HOST_CONNECT:$PV_CATALOG_K8S
+        ssh $REMOTE_USER@$REMOTE_HOST_CONNECT "cd $PV_CATALOG_K8S && $UP_DOWN_CONTAINER up -d"
+      done
+  tags:
+    - $STAND_K8S_PV
+  rules:
+    - if: $CI_SERVER_HOST == "git.vus.ru" && $stand == "dev"
+    - if: $CI_COMMIT_TAG != null && $CI_SERVER_HOST == "gitlab.ms.ru" && $stand == "test"
+    - when: never
+
+
+
+
+deploy_jitsi:
+  stage: jitsi
+  variables:
+    UP_DOWN_CONTAINER: "docker compose --env-file .jitsi-env -f docker-compose-jitsi.yml -f docker-compose-jitsi-static-ips.yml"
+  <<: *deploy_template
+
+
+deploy_jvb:
+  stage: jvb
+  variables:
+    UP_DOWN_CONTAINER: "docker compose --env-file .jitsi-env -f docker-compose-jvb.yml"
+  <<: *deploy_template
+
+
+deploy_jibri:
+  stage: jibri
+  variables:
+    UP_DOWN_CONTAINER: "docker compose --env-file .jitsi-env -f docker-compose-jibri.yml"
+  <<: *deploy_template
